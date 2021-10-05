@@ -1,0 +1,82 @@
+\documentclass{beamer}
+\usepackage{tikz} 
+\usepackage{expl3}%向下兼容
+
+\begin{document}
+\ExplSyntaxOn
+
+\cs_new:Nn \hanoi_disc:nn {% 画盘子
+    \draw [black,fill=\clist_item:Nn \c_disc_color {#2},rounded~corners] (-#2*0.2,#1*0.3-0.3) rectangle (#2*0.2,#1*0.3);
+    \node [scale=0.8] at (0,#1*0.3-0.15) {#2};
+}
+
+\cs_new:Nn \hanoi_single:Nn {% 画柱子
+    \fp_set:Nn \l_tmpa_fp {0.25}
+    \fill[teal!60] (-1.6, 0) rectangle (1.6, -\fp_use:N \l_tmpa_fp)
+                (\fp_eval:n {-\l_tmpa_fp/2}, 0 ) rectangle (\fp_eval:n {\l_tmpa_fp/2}, 2.4);
+    \node at (0,-0.6) {#2};
+    \int_step_inline:nn {\seq_count:N #1}{
+        \hanoi_disc:nn {\int_eval:n {\seq_count:N #1 - ##1 + 1}} {\seq_item:Nn #1 {##1}}
+    }
+}
+
+\cs_new:Nn \hanoi_draw:n {% 生成一帧（画出三个柱子以及所有圆盘）
+    \begin{frame}{#1}
+    \centering
+    \begin{tikzpicture}
+        \int_step_variable:nNn {3} {\l_lp_var} {
+            \begin{scope}[xshift=\fp_eval:n {(\l_lp_var-1)*0.35+0.15}\textwidth]
+                \exp_args:Nx \hanoi_single:Nn 
+                {\clist_item:Nn \l_hanoi_towers_clist {\l_lp_var}} 
+                {\int_to_Alph:n {\l_lp_var}}
+            \end{scope}
+        }
+    \end{tikzpicture}
+    \end{frame}
+}
+
+\cs_new:Nn \__hanoi_move:NN {% 移动圆盘，将容器#1的元素放到容器#2即可
+    \seq_pop:NN #1 \l_tmpa_tl
+    \exp_args:NNx \seq_push:Nn #2 {\tl_use:N \l_tmpa_tl}
+}
+
+\cs_new:Nn \hanoi_move:nn {% 移动圆盘，调用\__hanoi_move:NN
+    \exp_args:Nxx \__hanoi_move:NN 
+    {\clist_item:Nn \l_hanoi_towers_clist {\int_from_alph:n {#1}}}
+    {\clist_item:Nn \l_hanoi_towers_clist {\int_from_alph:n {#2}}}
+}
+
+\cs_new:Nn \_my_hanoi:nnnn {%Hanoi核心函数
+    \bool_if:nTF {\int_compare_p:n {#1=0}}{}
+    {
+        \_my_hanoi:nnnn {\int_eval:n {#1-1}} {#2} {#4} {#3}
+        % \par Move~#1~from~#2~to~#3~through~#4
+        \hanoi_move:nn {#2} {#3} % 移动圆盘
+        \hanoi_draw:n {Move~#1~from~#2~to~#3~through~#4} % GUI
+        \_my_hanoi:nnnn {\int_eval:n {#1-1}} {#4} {#3} {#2}
+    }
+}
+
+\cs_new:Nn \my_hanoi:n {% 预处理，在A柱放#1个圆盘
+    \int_step_inline:nn {#1} {
+        \seq_put_right:Nn \l_hanoi_A_seq {##1}
+    }
+    \hanoi_draw:n {Initial~State}
+    \_my_hanoi:nnnn {#1} {A} {B} {C}
+}
+
+% 给圆盘设置不同颜色
+\clist_const:Nn \c_disc_color {red!50,lime!50,blue!50,cyan!50,magenta!50,yellow!50,brown!50,
+green!50,olive!50,orange!50,pink!50,purple!50,teal!50,violet!50}
+
+% 定义三个圆柱的容器，并放到一个列表中
+\seq_new:N \l_hanoi_A_seq
+\seq_new:N \l_hanoi_B_seq
+\seq_new:N \l_hanoi_C_seq 
+\clist_set:Nn \l_hanoi_towers_clist {\l_hanoi_A_seq,\l_hanoi_B_seq,\l_hanoi_C_seq}
+
+\my_hanoi:n {5} % 调用\my_hanoi:n，生成四个圆盘时的演示文档
+
+\ExplSyntaxOff
+\end{document}
+
