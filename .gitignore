@@ -21,3 +21,7 @@
 *.mtc1
 *.out
 *.synctex.gz
+*.fdb_latexmk
+*.fls
+*.nav
+*.snm
